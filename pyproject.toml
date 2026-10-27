@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signal-feed-mcp"
+version = "0.1.0"
+description = "MCP server for Signal Feed API: daily market-regime context (risk-on / risk-off) for AI agents, paid per call via x402."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Agrobroker LTD", email = "hello@agenttrustapi.com" }]
+keywords = ["mcp", "x402", "market-regime", "trading-agent", "base", "usdc"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "mcp>=1.9,<3.0",
+    "httpx>=0.27,<1.0",
+    "x402[evm]>=2.21,<3.0",
+    "eth-account>=0.13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://signals.agenttrustapi.com"
+Source = "https://github.com/DinevDecor/signal-feed-mcp"
+"For LLM agents" = "https://signals.agenttrustapi.com/llms.txt"
+
+[project.scripts]
+signal-feed-mcp = "signal_feed_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

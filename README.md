@@ -40,7 +40,8 @@ Claude Desktop, Claude Code, Cursor or any stdio MCP client:
       "command": "signal-feed-mcp",
       "env": {
         "X402_BUYER_PRIVATE_KEY": "<optional: key of a wallet holding a little USDC on Base>",
-        "SIGNAL_FEED_MAX_PAID_CALLS": "3"
+        "SIGNAL_FEED_MAX_PAID_CALLS": "3",
+        "SIGNAL_FEED_PREFLIGHT": "block"
       }
     }
   }
@@ -79,7 +80,25 @@ Use a dedicated wallet that holds only what you are willing to spend.
 - **The x402 client's spend controls** are capped at 0.10 USDC per payment.
 - **After paying**, the receipt hash, the recomputed hash and the hash in the public ledger must all match.
 - **Session budget:** at most `SIGNAL_FEED_MAX_PAID_CALLS` payments per server process (default 3). Each payment
-  is counted before it is attempted.
+  is counted before it is attempted. A payment refused by the preflight below is not counted.
+- **Independent preflight (optional):** with `SIGNAL_FEED_PREFLIGHT`, every payment is first sent to
+  [Agent Trust API](https://api.agenttrustapi.com/v1/schema)'s payment preflight (`POST /v1/preflight/payment`,
+  same seller, no charge at the time of writing). It answers `ALLOW`, `REVIEW` or `BLOCK` for that exact payment.
+  - **What it checks:** the x402 offer is consistent, and the payee is bound to the resource. If you give it a signed
+    delegation (`SIGNAL_FEED_AUTHORITY_FILE`), it also checks that this agent is authorized to make exactly this
+    payment.
+  - **Modes:** `block` pays on `ALLOW` or `REVIEW` and refuses on `BLOCK`. `allow-only` pays only on `ALLOW`.
+  - **It fails closed:** if Agent Trust is unreachable or answers anything unexpected, nothing is signed.
+  - **What it sends:** the agent id, the payment tuple, the 402 offer and the optional delegation. It never sends
+    your key.
+  - **Scope:** it checks the payment, not whether the data will be useful to you. It is not insurance.
+
+### Suggested spend policy for any agent buying this feed
+
+- Pay only `https://signals.agenttrustapi.com/v1/feed/latest`, only to the published merchant, only USDC on Base.
+- At most 0.10 USDC per issue and 0.20 USDC per day. One new issue a day is enough, and the date is in the offer.
+- Never retry a failed payment blindly. Stop on a non-200 answer or on a duplicate charge, and ask for a refund
+  under the published policy.
 
 ## Environment
 
@@ -89,6 +108,10 @@ Use a dedicated wallet that holds only what you are willing to spend.
 | `SIGNAL_FEED_MAX_PAID_CALLS` | `3` | payments allowed per server process |
 | `SIGNAL_FEED_EXPECTED_PAY_TO` | published merchant | the only payee the client will pay |
 | `SIGNAL_FEED_BASE_URL` | `https://signals.agenttrustapi.com` | API base URL |
+| `SIGNAL_FEED_PREFLIGHT` | `off` | `off`, `block` or `allow-only` (Agent Trust payment preflight) |
+| `SIGNAL_FEED_AUTHORITY_FILE` | unset | path to a delegation (authority envelope) JSON for the preflight |
+| `SIGNAL_FEED_AGENT_ID` | `signal-feed-mcp` | agent id sent to the preflight |
+| `SIGNAL_FEED_PREFLIGHT_URL` | Agent Trust production | preflight endpoint |
 
 ## Offers
 

@@ -17,6 +17,7 @@ import base64
 import binascii
 import importlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -87,6 +88,7 @@ class PaidResult:
     payload_sha256: str
     issue: dict[str, Any]
     receipt: dict[str, Any]
+    preflight: dict[str, Any] | None = None
 
 
 class PaymentSigner(Protocol):
@@ -182,7 +184,12 @@ def _check_signed(header: str, requirements: dict[str, Any]) -> None:
         raise PaymentError("the signed payment does not match the reviewed requirements")
 
 
-def pay_for_latest(config: BuyerConfig, signer: PaymentSigner, client: httpx.Client) -> PaidResult:
+Preflight = Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]
+
+
+def pay_for_latest(
+    config: BuyerConfig, signer: PaymentSigner, client: httpx.Client, preflight: Preflight | None = None
+) -> PaidResult:
     unpaid = client.get(PATH)
     if unpaid.status_code != 402:
         raise PaymentError(
@@ -193,6 +200,8 @@ def pay_for_latest(config: BuyerConfig, signer: PaymentSigner, client: httpx.Cli
         raise PaymentError(f"402 response has no {HEADER_PAYMENT_REQUIRED} header")
     payment_required = decode_header(raw)
     requirements = select_requirements(payment_required, config)
+    # Optional independent check of this exact payment; it raises before anything is signed.
+    preflight_result = preflight(payment_required, requirements) if preflight else None
 
     header = signer.create_payment_signature_header(payment_required, requirements)
     _check_signed(header, requirements)
@@ -228,4 +237,5 @@ def pay_for_latest(config: BuyerConfig, signer: PaymentSigner, client: httpx.Cli
         payload_sha256=recomputed,
         issue=issue,
         receipt=receipt,
+        preflight=preflight_result,
     )

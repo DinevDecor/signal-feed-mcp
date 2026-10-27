@@ -14,11 +14,13 @@ it hard-fails unless the offer is exactly the reviewed tuple and ``payTo`` is th
 published merchant (``SIGNAL_FEED_EXPECTED_PAY_TO``); after paying it checks receipt
 hash == recomputed hash == ledger hash. A session budget (``SIGNAL_FEED_MAX_PAID_CALLS``,
 default 3) caps how many payments one server process can make. Without a key the paid
-tool is unavailable and says so.
+tool is unavailable and says so. Optionally (``SIGNAL_FEED_PREFLIGHT=block|allow-only``) every payment is
+first checked by Agent Trust API's free payment preflight and is not signed unless it clears (preflight.py).
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from collections.abc import Callable
@@ -28,6 +30,7 @@ from typing import Any
 import httpx
 
 from signal_feed_mcp import payment as pay
+from signal_feed_mcp import preflight as pf
 from signal_feed_mcp.fingerprint import fingerprint
 
 try:  # mcp >= 2
@@ -40,6 +43,10 @@ except ImportError:  # mcp 1.x
 BASE_URL_ENV = "SIGNAL_FEED_BASE_URL"
 EXPECTED_PAY_TO_ENV = "SIGNAL_FEED_EXPECTED_PAY_TO"
 MAX_PAID_CALLS_ENV = "SIGNAL_FEED_MAX_PAID_CALLS"
+PREFLIGHT_ENV = "SIGNAL_FEED_PREFLIGHT"  # off (default) | block | allow-only, see preflight.py
+PREFLIGHT_URL_ENV = "SIGNAL_FEED_PREFLIGHT_URL"
+AGENT_ID_ENV = "SIGNAL_FEED_AGENT_ID"
+AUTHORITY_FILE_ENV = "SIGNAL_FEED_AUTHORITY_FILE"
 NETWORK_ENV = "SIGNAL_FEED_NETWORK"  # network the paid tool pays on; only Base mainnet is supported
 BUYER_PRIVATE_KEY_ENV = "X402_BUYER_PRIVATE_KEY"
 DEFAULT_BASE_URL = "https://signals.agenttrustapi.com"
@@ -70,6 +77,10 @@ class Settings:
     max_paid_calls: int = DEFAULT_MAX_PAID_CALLS
     buyer_key: str = field(default="", repr=False)
     network: str = pay.NETWORK_BASE_MAINNET
+    preflight_mode: str = "off"
+    preflight_url: str = pf.DEFAULT_URL
+    agent_id: str = "signal-feed-mcp"
+    authority_file: str = ""
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -83,6 +94,10 @@ class Settings:
             max_paid_calls=max(0, max_calls),
             buyer_key=os.environ.get(BUYER_PRIVATE_KEY_ENV) or "",
             network=(os.environ.get(NETWORK_ENV) or pay.NETWORK_BASE_MAINNET).strip(),
+            preflight_mode=(os.environ.get(PREFLIGHT_ENV) or "off").strip().lower(),
+            preflight_url=os.environ.get(PREFLIGHT_URL_ENV) or pf.DEFAULT_URL,
+            agent_id=(os.environ.get(AGENT_ID_ENV) or "signal-feed-mcp").strip(),
+            authority_file=os.environ.get(AUTHORITY_FILE_ENV) or "",
         )
 
 
@@ -98,12 +113,14 @@ class SignalFeedTools:
         settings: Settings,
         client_factory: ClientFactory | None = None,
         signer_factory: SignerFactory = pay.OfficialX402Signer,
+        preflight_client_factory: ClientFactory | None = None,
     ) -> None:
         self._settings = settings
         self._client_factory = client_factory or (
             lambda: httpx.Client(base_url=settings.base_url, timeout=TIMEOUT_SECONDS)
         )
         self._signer_factory = signer_factory
+        self._preflight_client_factory = preflight_client_factory
         self._signer: pay.PaymentSigner | None = None
         self.paid_calls = 0
 
@@ -170,7 +187,31 @@ class SignalFeedTools:
             "accepts": offer.get("accepts"),
             "paid_tool_enabled": bool(self._settings.buyer_key),
             "paid_calls_left_this_session": max(0, self._settings.max_paid_calls - self.paid_calls),
+            "agent_trust_preflight": self._settings.preflight_mode,
         }
+
+    def _preflight(self) -> pf.AgentTrustPreflight | None:
+        mode = self._settings.preflight_mode
+        if mode == "off":
+            return None
+        if mode not in pf.MODES:
+            raise ToolFailure(f"{PREFLIGHT_ENV} must be one of {list(pf.MODES)}; payment not attempted")
+        authority = None
+        if self._settings.authority_file:
+            try:
+                with open(self._settings.authority_file, encoding="utf-8") as f:
+                    authority = json.load(f)
+            except (OSError, ValueError):
+                raise ToolFailure(
+                    f"{AUTHORITY_FILE_ENV} could not be read as JSON; payment not attempted"
+                ) from None
+        return pf.AgentTrustPreflight(
+            mode,
+            self._settings.agent_id,
+            authority=authority,
+            url=self._settings.preflight_url,
+            client_factory=self._preflight_client_factory,
+        )
 
     def latest_issue(self) -> dict[str, Any]:
         if not self._settings.buyer_key:
@@ -191,6 +232,7 @@ class SignalFeedTools:
             except pay.PaymentError as exc:
                 raise ToolFailure(str(exc)) from None
         signer = self._signer
+        preflight = self._preflight()
         config = pay.BuyerConfig(
             base_url=self._settings.base_url,
             expected_pay_to=self._settings.expected_pay_to,
@@ -199,7 +241,10 @@ class SignalFeedTools:
         self.paid_calls += 1  # counted before the request: a failed settle may still have spent
         with self._client_factory() as client:
             try:
-                result = pay.pay_for_latest(config, signer, client)
+                result = pay.pay_for_latest(config, signer, client, preflight=preflight)
+            except pf.PreflightRefused as exc:
+                self.paid_calls -= 1  # refused before signing: nothing was spent
+                raise ToolFailure(str(exc)) from None
             except pay.PaymentError as exc:
                 raise ToolFailure(f"payment not completed: {exc}") from None
             except httpx.HTTPError as exc:
@@ -219,6 +264,7 @@ class SignalFeedTools:
                 "payload_sha256": result.payload_sha256,
                 "receipt_issue_ledger_hashes_match": True,
             },
+            "agent_trust_preflight": result.preflight,
         }
 
 
@@ -278,8 +324,8 @@ def build_server(tools: SignalFeedTools) -> Any:
     @server.tool()
     def get_latest_issue() -> dict[str, Any]:
         """Today's Regime Feed issue, paid per call via x402 (0.10 USDC on Base mainnet) from the wallet
-        configured in this server; returns the issue, the receipt, the settlement transaction and the
-        hash check against the public ledger."""
+        configured in this server, optionally checked first by Agent Trust preflight; returns the issue,
+        the receipt, the settlement transaction and the hash check against the public ledger."""
         return wrap(tools.latest_issue)
 
     return server

@@ -221,3 +221,90 @@ def test_mcp_server_lists_nine_tools(monkeypatch):
         "get_payment_offer",
         "get_latest_issue",
     }
+
+
+ATA = "https://ata.example/v1/preflight/payment"
+
+
+class FakeAta:
+    def __init__(self, decision="REVIEW", status=200, tamper=None, down=False):
+        self.decision, self.status, self.tamper, self.down = decision, status, tamper or {}, down
+        self.requests = []
+
+    def __call__(self, request):
+        if self.down:
+            raise httpx.ConnectError("down")
+        body = json.loads(request.content)
+        self.requests.append((dict(request.headers), body))
+        echoed = dict(body["payment"], **self.tamper)
+        return httpx.Response(
+            self.status,
+            json={
+                "version": "payment-preflight/v1",
+                "decision": self.decision,
+                "reason_codes": ["X402_REQUIREMENT_MATCHED"],
+                "decision_scope": "THIS_PAYMENT_ONLY",
+                "payment": echoed,
+            },
+        )
+
+
+def make_guarded(mode, ata, authority_file=""):
+    tools, api, signer = make_tools()
+    tools._settings.preflight_mode = mode
+    tools._settings.preflight_url = ATA
+    tools._settings.authority_file = authority_file
+    tools._preflight_client_factory = lambda: httpx.Client(transport=httpx.MockTransport(ata))
+    return tools, api, signer
+
+
+def test_preflight_off_by_default_makes_no_call(monkeypatch):
+    for name in ("SIGNAL_FEED_PREFLIGHT", "SIGNAL_FEED_AUTHORITY_FILE"):
+        monkeypatch.delenv(name, raising=False)
+    assert ms.Settings.from_env().preflight_mode == "off"
+    tools, _, _ = make_tools()
+    assert tools.latest_issue()["agent_trust_preflight"] is None
+
+
+def test_block_mode_pays_on_review_and_sends_the_exact_tuple():
+    ata = FakeAta("REVIEW")
+    tools, api, signer = make_guarded("block", ata)
+    out = tools.latest_issue()
+    assert out["agent_trust_preflight"]["decision"] == "REVIEW" and signer.calls == 1
+    headers, body = ata.requests[0]
+    import uuid
+
+    assert uuid.UUID(headers["payment-intent-id"]).version == 4
+    assert body["version"] == "payment-preflight-input/v1" and "authority" not in body
+    assert body["payment"]["x402_amount_atomic"] == "100000" and body["payment"]["pay_to"] == MERCHANT
+    assert body["payment"]["resource"] == BASE + pay.PATH and body["x402_payment_required"]["accepts"] == [
+        offer()
+    ]
+
+
+@pytest.mark.parametrize(
+    "mode, ata",
+    [
+        ("block", FakeAta("BLOCK")),
+        ("allow-only", FakeAta("REVIEW")),
+        ("block", FakeAta(down=True)),
+        ("block", FakeAta(status=503)),
+        ("block", FakeAta("ALLOW", tamper={"pay_to": "0x2222222222222222222222222222222222222222"})),
+        ("bogus", FakeAta("ALLOW")),
+    ],
+)
+def test_preflight_refusals_never_sign_or_spend_budget(mode, ata):
+    tools, api, signer = make_guarded(mode, ata)
+    with pytest.raises(ms.ToolFailure, match="payment not attempted"):
+        tools.latest_issue()
+    assert signer.calls == 0 and api.paid_headers == [] and tools.paid_calls == 0
+
+
+def test_allow_only_with_authority_envelope(tmp_path):
+    envelope = {"version": "payment-authority-match-input/v1", "example": True}
+    path = tmp_path / "authority.json"
+    path.write_text(json.dumps(envelope), encoding="utf-8")
+    ata = FakeAta("ALLOW")
+    tools, _, signer = make_guarded("allow-only", ata, str(path))
+    assert tools.latest_issue()["agent_trust_preflight"]["decision"] == "ALLOW" and signer.calls == 1
+    assert ata.requests[0][1]["authority"] == envelope

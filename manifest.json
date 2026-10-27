@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "signal-feed-mcp",
   "display_name": "Signal Feed API: market regime for agents",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Daily market-regime context for trading agents (risk-on / risk-off): BTC trend, alt trend, US equity regime, SPY RSI-2, MSTR BTC filter. Paid per call via x402.",
   "long_description": "One rule-based issue per day, the same for every buyer. Today's issue costs 0.10 USDC on Base (x402, VAT included), paid from a wallet you configure, with hard checks before and after signing. Older issues, the rules, the ledger of hashes and the full PAPER results record are free. The rules come from the seller's own virtual (PAPER) research accounts; the first issue was 2026-10-26, so there is no track record. Not investment advice.",
   "author": {
@@ -23,10 +23,16 @@
     "entry_point": "src/signal_feed_mcp/server.py",
     "mcp_config": {
       "command": "uv",
-      "args": ["run", "--directory", "${__dirname}", "signal-feed-mcp"],
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "signal-feed-mcp"
+      ],
       "env": {
         "X402_BUYER_PRIVATE_KEY": "${user_config.buyer_private_key}",
-        "SIGNAL_FEED_MAX_PAID_CALLS": "${user_config.max_paid_calls}"
+        "SIGNAL_FEED_MAX_PAID_CALLS": "${user_config.max_paid_calls}",
+        "SIGNAL_FEED_PREFLIGHT": "${user_config.preflight}"
       }
     }
   },
@@ -45,24 +51,75 @@
       "default": 3,
       "min": 0,
       "max": 100
+    },
+    "preflight": {
+      "type": "string",
+      "title": "Agent Trust preflight",
+      "description": "off, block or allow-only. block: every payment is first checked by Agent Trust API and refused on BLOCK; allow-only: paid only on ALLOW (needs a delegation). Fails closed.",
+      "default": "block",
+      "required": false
     }
   },
   "tools": [
-    {"name": "get_catalog", "description": "Indicators and their rules, schedule, price, free and paid access"},
-    {"name": "get_schema", "description": "Closed JSON Schema of one issue"},
-    {"name": "list_issues", "description": "Ledger of every issue date with its payload SHA-256"},
-    {"name": "get_delayed_issue", "description": "Free issue at least 7 days old, hash-checked against the ledger"},
-    {"name": "get_results_record", "description": "Full daily PAPER results behind each indicator, losses included"},
-    {"name": "get_deviations", "description": "Dated bugs, outages and other deviations"},
-    {"name": "get_disclosures", "description": "Publisher's positions and conflicts of interest"},
-    {"name": "get_payment_offer", "description": "The live x402 offer, without paying"},
-    {"name": "get_latest_issue", "description": "Today's issue, paid 0.10 USDC on Base via x402, with receipt and hash check"}
+    {
+      "name": "get_catalog",
+      "description": "Indicators and their rules, schedule, price, free and paid access"
+    },
+    {
+      "name": "get_schema",
+      "description": "Closed JSON Schema of one issue"
+    },
+    {
+      "name": "list_issues",
+      "description": "Ledger of every issue date with its payload SHA-256"
+    },
+    {
+      "name": "get_delayed_issue",
+      "description": "Free issue at least 7 days old, hash-checked against the ledger"
+    },
+    {
+      "name": "get_results_record",
+      "description": "Full daily PAPER results behind each indicator, losses included"
+    },
+    {
+      "name": "get_deviations",
+      "description": "Dated bugs, outages and other deviations"
+    },
+    {
+      "name": "get_disclosures",
+      "description": "Publisher's positions and conflicts of interest"
+    },
+    {
+      "name": "get_payment_offer",
+      "description": "The live x402 offer, without paying"
+    },
+    {
+      "name": "get_latest_issue",
+      "description": "Today's issue, paid 0.10 USDC on Base via x402, with receipt and hash check"
+    }
   ],
-  "keywords": ["market-regime", "risk-on-risk-off", "trading-agent", "x402", "base", "usdc", "crypto", "btc"],
+  "keywords": [
+    "market-regime",
+    "risk-on-risk-off",
+    "trading-agent",
+    "x402",
+    "base",
+    "usdc",
+    "crypto",
+    "btc"
+  ],
   "license": "MIT",
-  "privacy_policies": ["https://signals.agenttrustapi.com/legal/privacy"],
+  "privacy_policies": [
+    "https://signals.agenttrustapi.com/legal/privacy"
+  ],
   "compatibility": {
-    "platforms": ["darwin", "linux", "win32"],
-    "runtimes": {"python": ">=3.10"}
+    "platforms": [
+      "darwin",
+      "linux",
+      "win32"
+    ],
+    "runtimes": {
+      "python": ">=3.10"
+    }
   }
 }

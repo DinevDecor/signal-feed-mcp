@@ -26,6 +26,9 @@ pip install "git+https://github.com/DinevDecor/signal-feed-mcp"
 uvx --from git+https://github.com/DinevDecor/signal-feed-mcp signal-feed-mcp
 ```
 
+Claude Desktop and other MCPB hosts can also install the one-file bundle (`signal-feed-mcp-<version>.mcpb`),
+which runs through `uv` and asks for the optional wallet key in its settings.
+
 ## Configure your MCP client
 
 Claude Desktop, Claude Code, Cursor or any stdio MCP client:

@@ -1,0 +1,6 @@
+.git
+.github
+.venv
+tests
+**/__pycache__
+*.mcpb

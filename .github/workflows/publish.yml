@@ -1,0 +1,42 @@
+name: publish
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match the package version
+        run: |
+          v=$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          test "v$v" = "$GITHUB_REF_NAME"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build the MCPB bundle
+        run: npx -y @anthropic-ai/mcpb pack . "signal-feed-mcp-${GITHUB_REF_NAME#v}.mcpb"
+      - name: GitHub release with the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" signal-feed-mcp-*.mcpb --generate-notes --title "$GITHUB_REF_NAME"
+
+  pypi:
+    # PyPI trusted publishing (no token). Needs the pending publisher on PyPI: project signal-feed-mcp,
+    # owner DinevDecor, repository signal-feed-mcp, workflow publish.yml, environment pypi.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build && python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1

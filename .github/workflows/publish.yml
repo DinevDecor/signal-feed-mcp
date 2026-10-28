@@ -2,8 +2,15 @@ name: publish
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.2.0 (must equal the package version)"
+        required: true
 permissions:
   contents: read
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -14,16 +21,16 @@ jobs:
       - name: Tag must match the package version
         run: |
           v=$(python3 -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          test "v$v" = "$GITHUB_REF_NAME"
+          test "v$v" = "$TAG"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Build the MCPB bundle
-        run: npx -y @anthropic-ai/mcpb pack . "signal-feed-mcp-${GITHUB_REF_NAME#v}.mcpb"
+        run: npx -y @anthropic-ai/mcpb pack . "signal-feed-mcp-${TAG#v}.mcpb"
       - name: GitHub release with the bundle
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" signal-feed-mcp-*.mcpb --generate-notes --title "$GITHUB_REF_NAME"
+        run: gh release create "$TAG" signal-feed-mcp-*.mcpb --target "$GITHUB_SHA" --generate-notes --title "$TAG"
 
   pypi:
     # PyPI trusted publishing (no token). Needs the pending publisher on PyPI: project signal-feed-mcp,

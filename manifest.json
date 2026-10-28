@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "signal-feed-mcp",
   "display_name": "Signal Feed API: market regime for agents",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Daily market-regime context for trading agents (risk-on / risk-off): BTC trend, alt trend, US equity regime, SPY RSI-2, MSTR BTC filter. Paid per call via x402.",
   "long_description": "One rule-based issue per day, the same for every buyer. Today's issue costs 0.10 USDC on Base (x402, VAT included), paid from a wallet you configure, with hard checks before and after signing. Older issues, the rules, the ledger of hashes and the full PAPER results record are free. The rules come from the seller's own virtual (PAPER) research accounts; the first issue was 2026-10-26, so there is no track record. Not investment advice.",
   "author": {

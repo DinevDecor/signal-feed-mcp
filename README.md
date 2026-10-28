@@ -21,9 +21,9 @@ One issue per day, the same for every buyer, with five rule-based market-state l
 Python 3.10+.
 
 ```bash
-pip install "git+https://github.com/DinevDecor/signal-feed-mcp"
+pip install signal-feed-mcp
 # or run without installing:
-uvx --from git+https://github.com/DinevDecor/signal-feed-mcp signal-feed-mcp
+uvx signal-feed-mcp
 ```
 
 Claude Desktop and other MCPB hosts can also install the one-file bundle (`signal-feed-mcp-<version>.mcpb`),
@@ -137,3 +137,6 @@ The tests run offline against a fake API. They make no network calls and no paym
 ## License
 
 MIT © 2026 Agrobroker LTD, Burgas, Bulgaria. Contact: hello@agenttrustapi.com
+
+<!-- Official MCP Registry ownership marker -->
+mcp-name: io.github.DinevDecor/signal-feed-mcp

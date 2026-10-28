@@ -36,7 +36,6 @@ jobs:
     # PyPI trusted publishing (no token). Needs the pending publisher on PyPI: project signal-feed-mcp,
     # owner DinevDecor, repository signal-feed-mcp, workflow publish.yml, environment pypi.
     runs-on: ubuntu-latest
-    continue-on-error: true
     environment: pypi
     permissions:
       id-token: write
@@ -47,3 +46,43 @@ jobs:
           python-version: "3.12"
       - run: pip install build && python -m build
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  mcp-registry:
+    # Official MCP Registry (registry.modelcontextprotocol.io). GitHub OIDC login gives the io.github.DinevDecor/*
+    # namespace. The registry checks that the PyPI package exists and that its README carries the mcp-name line.
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: server.json versions must match the tag
+        run: |
+          test "$(jq -r .version server.json)" = "${TAG#v}"
+          test "$(jq -r '.packages[0].version' server.json)" = "${TAG#v}"
+      - name: Wait for the version on PyPI
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS "https://pypi.org/pypi/signal-feed-mcp/${TAG#v}/json" >/dev/null && exit 0
+            sleep 10
+          done
+          exit 1
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl -fLsS -o "$archive" "$base_url/$archive"
+          curl -fLsS -o "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish

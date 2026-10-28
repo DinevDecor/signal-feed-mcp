@@ -1,0 +1,64 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.DinevDecor/signal-feed-mcp",
+  "title": "Signal Feed API: market regime",
+  "description": "Daily market regime (risk-on / risk-off) for trading agents, paid per call via x402 USDC on Base.",
+  "repository": {
+    "url": "https://github.com/DinevDecor/signal-feed-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://signals.agenttrustapi.com",
+  "version": "0.2.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "signal-feed-mcp",
+      "version": "0.2.1",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "X402_BUYER_PRIVATE_KEY",
+          "description": "Optional. Hex private key of a small, dedicated buyer wallet with USDC on Base. Without it only the free tools work. Used only to sign locally; never logged or sent.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "SIGNAL_FEED_MAX_PAID_CALLS",
+          "description": "Maximum paid calls per server run (0.10 USDC each).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "3"
+        },
+        {
+          "name": "SIGNAL_FEED_PREFLIGHT",
+          "description": "Optional Agent Trust payment preflight before signing: off, block or allow-only.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "off"
+        },
+        {
+          "name": "SIGNAL_FEED_AGENT_ID",
+          "description": "Agent id sent to the preflight.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "signal-feed-mcp"
+        },
+        {
+          "name": "SIGNAL_FEED_AUTHORITY_FILE",
+          "description": "Optional path to a signed delegation (authority envelope) sent to the preflight.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

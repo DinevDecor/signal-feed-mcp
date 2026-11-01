@@ -16,6 +16,16 @@ One issue per day, the same for every buyer, with five rule-based market-state l
 > 2026-10-26, so there is **no track record**. This is context, **not investment advice**. Every issue is
 > hash-committed, OpenTimestamps-anchored and never edited, and the full PAPER results (losses included) are public.
 
+## What it does not do
+
+- It does not place orders, trade or connect to any exchange or broker.
+- It does not predict prices or returns, and it gives no target weights, position sizes or advice.
+- It has no track record yet: the first issue was 2026-10-26.
+- It never asks the seller for a key. The optional wallet key stays in your environment, signs on your machine and is
+  never sent anywhere. The client pays only the offer it has checked (see Payment safety), at most 0.10 USDC per
+  payment and 3 payments per session by default.
+- It does not rewrite issues. A correction is a new dated record.
+
 ## Install
 
 Python 3.10+.
@@ -28,6 +38,28 @@ uvx signal-feed-mcp
 
 Claude Desktop and other MCPB hosts can also install the one-file bundle (`signal-feed-mcp-<version>.mcpb`),
 which runs through `uv` and asks for the optional wallet key in its settings.
+
+## Connect with one command
+
+Needs Python 3.10+ and [`uv`](https://docs.astral.sh/uv/). Every free tool works without a wallet; only
+`get_latest_issue` pays.
+
+```bash
+# Claude Code
+claude mcp add --transport stdio signal-feed -- uvx signal-feed-mcp
+
+# Codex CLI
+codex mcp add signal-feed -- uvx signal-feed-mcp
+```
+
+Claude Desktop, Cursor and other clients: add a stdio server with command `uvx` and argument `signal-feed-mcp`
+(JSON example below).
+
+**Try this first** (no payment):
+
+> Use the signal-feed tools. Call `get_catalog` and explain in plain words what each indicator means and how long
+> its value stays valid. Then call `get_results_record` and tell me what the record shows and what it does not show.
+> Make no paid call.
 
 ## Configure your MCP client
 

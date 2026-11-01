@@ -168,7 +168,7 @@ The tests run offline against a fake API. They make no network calls and no paym
 
 ## License
 
-MIT © 2026 Agrobroker LTD, Burgas, Bulgaria. Contact: hello@agenttrustapi.com
+MIT © 2026 Signal Feed API, Burgas, Bulgaria. Contact: hello@agenttrustapi.com
 
 <!-- Official MCP Registry ownership marker -->
 mcp-name: io.github.DinevDecor/signal-feed-mcp

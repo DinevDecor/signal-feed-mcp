@@ -1,7 +1,7 @@
 """Buyer side of one x402 v2 payment for ``GET /v1/feed/latest``, with hard checks before and after.
 
 1. unpaid ``GET /v1/feed/latest`` -> expect 402 and decode ``PAYMENT-REQUIRED``;
-2. hard-fail unless the offer is exactly the reviewed tuple (exact, Base mainnet, USDC, 0.05 USDC),
+2. hard-fail unless the offer is exactly the reviewed tuple (exact, Base mainnet, USDC, 0.04 USDC),
    ``payTo`` is the published merchant and ``resource.url`` is the expected endpoint;
 3. sign with the official x402 v2 EVM client, with spend controls capped at that one price;
 4. retry with ``PAYMENT-SIGNATURE``; decode ``PAYMENT-RESPONSE``;
@@ -47,10 +47,10 @@ class NetworkProfile:
     price_usd: str
 
 
-# The only tuple this client will sign: 0.05 USDC (6 decimals) on Base mainnet, VAT included.
+# The only tuple this client will sign: 0.04 USDC (6 decimals) on Base mainnet, VAT included.
 PROFILES: dict[str, NetworkProfile] = {
     NETWORK_BASE_MAINNET: NetworkProfile(
-        NETWORK_BASE_MAINNET, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "50000", "USD Coin", "2", "0.05"
+        NETWORK_BASE_MAINNET, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "40000", "USD Coin", "2", "0.04"
     ),
 }
 

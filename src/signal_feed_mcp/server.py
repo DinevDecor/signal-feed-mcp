@@ -7,7 +7,7 @@ data of its own: every tool returns what the API returns, plus hash checks.
 Free tools: catalog, schema, ledger, delayed issues (with hash check against the
 ledger), full results record, deviations, disclosures, and the payment offer.
 
-Paid tool ``get_latest_issue``: one x402 payment of 0.05 USDC on Base mainnet (VAT included),
+Paid tool ``get_latest_issue``: one x402 payment of 0.04 USDC on Base mainnet (VAT included),
 signed locally with the agent operator's own wallet key (``X402_BUYER_PRIVATE_KEY``,
 read from this process environment only, never logged or returned). Before signing
 it hard-fails unless the offer is exactly the reviewed tuple and ``payTo`` is the
@@ -61,7 +61,7 @@ INSTRUCTIONS = (
     "indicators (BTC trend, alt trend, US equity regime, SPY RSI-2 state, MSTR BTC filter) derived from "
     "virtual PAPER research accounts; there is no track record. Not investment advice. "
     "Issues older than 7 days, the full PAPER results record (losses included), deviations and "
-    "disclosures are free. Today's issue is paid per call via x402 (0.05 USDC on Base, VAT included); "
+    "disclosures are free. Today's issue is paid per call via x402 (0.04 USDC on Base, VAT included); "
     "get_payment_offer shows the live offer."
 )
 
@@ -279,53 +279,60 @@ def build_server(tools: SignalFeedTools) -> Any:
 
     @server.tool()
     def get_catalog() -> dict[str, Any]:
-        """Describe the feed: indicators and their rules, schedule, price, latest and first issue dates,
-        free and paid access, timestamp proofs and the results record."""
+        """Free. Use first, when you need to know what the daily regime labels mean before trusting them:
+        indicators and their exact rules, schedule, price, latest and first issue dates, free and paid access,
+        timestamp proofs and the results record."""
         return wrap(tools.catalog)
 
     @server.tool()
     def get_schema() -> dict[str, Any]:
-        """Closed JSON Schema of one Regime Feed issue."""
+        """Free. Use when you must parse or validate an issue safely: the closed JSON Schema of one issue."""
         return wrap(tools.schema)
 
     @server.tool()
     def list_issues() -> dict[str, Any]:
-        """Append-only ledger of every published issue date with its payload SHA-256."""
+        """Free. Use to see which issue dates exist or to verify an issue you hold: every published date with
+        its payload SHA-256, append-only."""
         return wrap(tools.ledger)
 
     @server.tool()
     def get_delayed_issue(issue_date: str) -> dict[str, Any]:
-        """Free Regime Feed issue for a date at least 7 days old (YYYY-MM-DD), with its hash recomputed and
-        compared to the issue's integrity block and to the public ledger."""
+        """Free. Use to try the feed before paying, or to backtest your own logic: the issue for a date at
+        least 7 days old (YYYY-MM-DD), with its hash recomputed and compared to the issue's integrity block
+        and to the public ledger."""
         return wrap(tools.delayed_issue, issue_date)
 
     @server.tool()
     def get_results_record(indicator: str | None = None) -> dict[str, Any]:
-        """Full daily PAPER results of the virtual account behind each indicator (equity, return, benchmark,
-        exposure, flat days, weekly fees and drawdown), losses included. Optional indicator id filter."""
+        """Free. Use when deciding how much weight to give an indicator: full daily PAPER results of the
+        virtual account behind each one (equity, return, benchmark, exposure, flat days, weekly fees and
+        drawdown), losses included. Optional indicator id filter. Not real-money results."""
         return wrap(tools.results_record, indicator)
 
     @server.tool()
     def get_deviations() -> dict[str, Any]:
-        """Dated list of bugs, outages, stops and other deviations that affected an indicator's account."""
+        """Free. Use to check whether a bad day was a data or system problem: dated bugs, outages, stops and
+        other deviations that affected an indicator's account."""
         return wrap(tools.deviations)
 
     @server.tool()
     def get_disclosures() -> dict[str, Any]:
-        """The publisher's disclosures: personal positions, affiliate commissions, conflicts of interest."""
+        """Free. Use to check the seller's conflicts of interest: personal positions, affiliate commissions
+        and other conflicts."""
         return wrap(tools.disclosures)
 
     @server.tool()
     def get_payment_offer() -> dict[str, Any]:
-        """The x402 payment offer for today's issue (price, network, asset, payee) without paying, and whether
-        the paid tool is configured in this server."""
+        """Free. Use before paying to see exactly what would be charged: today's x402 offer (price, network,
+        asset, payee) without paying, and whether the paid tool is configured in this server."""
         return wrap(tools.payment_offer)
 
     @server.tool()
     def get_latest_issue() -> dict[str, Any]:
-        """Today's Regime Feed issue, paid per call via x402 (0.05 USDC on Base mainnet) from the wallet
-        configured in this server, optionally checked first by Agent Trust preflight; returns the issue,
-        the receipt, the settlement transaction and the hash check against the public ledger."""
+        """Paid, 0.04 USDC on Base via x402. Use once a day when you must decide whether markets are risk-on
+        or risk-off before sizing or gating a trade: today's five rule-based regime labels, paid from the
+        wallet configured in this server (optionally checked first by Agent Trust preflight). Returns the
+        issue, the receipt, the settlement transaction and the hash check against the public ledger."""
         return wrap(tools.latest_issue)
 
     return server

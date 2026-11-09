@@ -83,7 +83,7 @@ class FakeApi:
             }
             receipt = {
                 "payload_sha256": TODAY["integrity"]["payload_sha256"],
-                "amount_atomic": "50000",
+                "amount_atomic": "40000",
                 "asset": offer()["asset"],
             }
             headers = {pay.HEADER_PAYMENT_RESPONSE: b64(settle)}
@@ -161,6 +161,7 @@ def test_paid_tool_returns_verified_issue_and_respects_budget():
     "accepts, message",
     [
         ([offer(amount="100000")], "reviewed tuple"),  # the old 0.10 price (SFA-017) is no longer signed
+        ([offer(amount="50000")], "reviewed tuple"),  # nor the 0.05 price (SFA-029)
         ([offer(payTo="0x2222222222222222222222222222222222222222")], "payTo"),
         ([offer(amount="1000000")], "reviewed tuple"),
         ([offer(network="eip155:84532")], "reviewed tuple"),
@@ -188,7 +189,7 @@ def test_official_x402_signer_signs_exactly_the_offer():
     sent = api.paid_headers[0]
     assert sent["accepted"] == offer()
     assert sent["payload"]["authorization"]["from"].lower() == account.address.lower()
-    assert sent["payload"]["authorization"]["value"] == "50000"
+    assert sent["payload"]["authorization"]["value"] == "40000"
 
 
 def test_key_never_in_repr_or_output():
@@ -277,7 +278,7 @@ def test_block_mode_pays_on_review_and_sends_the_exact_tuple():
 
     assert uuid.UUID(headers["payment-intent-id"]).version == 4
     assert body["version"] == "payment-preflight-input/v1" and "authority" not in body
-    assert body["payment"]["x402_amount_atomic"] == "50000" and body["payment"]["pay_to"] == MERCHANT
+    assert body["payment"]["x402_amount_atomic"] == "40000" and body["payment"]["pay_to"] == MERCHANT
     assert body["payment"]["resource"] == BASE + pay.PATH and body["x402_payment_required"]["accepts"] == [
         offer()
     ]

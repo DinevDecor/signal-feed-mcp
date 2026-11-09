@@ -7,7 +7,7 @@ data of its own: every tool returns what the API returns, plus hash checks.
 Free tools: catalog, schema, ledger, delayed issues (with hash check against the
 ledger), full results record, deviations, disclosures, and the payment offer.
 
-Paid tool ``get_latest_issue``: one x402 payment of 0.10 USDC on Base mainnet (VAT included),
+Paid tool ``get_latest_issue``: one x402 payment of 0.05 USDC on Base mainnet (VAT included),
 signed locally with the agent operator's own wallet key (``X402_BUYER_PRIVATE_KEY``,
 read from this process environment only, never logged or returned). Before signing
 it hard-fails unless the offer is exactly the reviewed tuple and ``payTo`` is the
@@ -61,7 +61,7 @@ INSTRUCTIONS = (
     "indicators (BTC trend, alt trend, US equity regime, SPY RSI-2 state, MSTR BTC filter) derived from "
     "virtual PAPER research accounts; there is no track record. Not investment advice. "
     "Issues older than 7 days, the full PAPER results record (losses included), deviations and "
-    "disclosures are free. Today's issue is paid per call via x402 (0.10 USDC on Base, VAT included); "
+    "disclosures are free. Today's issue is paid per call via x402 (0.05 USDC on Base, VAT included); "
     "get_payment_offer shows the live offer."
 )
 
@@ -323,7 +323,7 @@ def build_server(tools: SignalFeedTools) -> Any:
 
     @server.tool()
     def get_latest_issue() -> dict[str, Any]:
-        """Today's Regime Feed issue, paid per call via x402 (0.10 USDC on Base mainnet) from the wallet
+        """Today's Regime Feed issue, paid per call via x402 (0.05 USDC on Base mainnet) from the wallet
         configured in this server, optionally checked first by Agent Trust preflight; returns the issue,
         the receipt, the settlement transaction and the hash check against the public ledger."""
         return wrap(tools.latest_issue)

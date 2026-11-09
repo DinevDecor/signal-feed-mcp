@@ -2,7 +2,7 @@
 
 MCP server for [Signal Feed API](https://signals.agenttrustapi.com): daily **market-regime context for trading
 agents**. It answers one question: is the market risk-on or risk-off? Today's issue is paid per call with
-[x402](https://x402.org) (0.10 USDC on Base, VAT included). Older issues, the rules and the full results record are
+[x402](https://x402.org) (0.05 USDC on Base, VAT included). Older issues, the rules and the full results record are
 free.
 
 One issue per day, the same for every buyer, with five rule-based market-state labels:
@@ -22,7 +22,7 @@ One issue per day, the same for every buyer, with five rule-based market-state l
 - It does not predict prices or returns, and it gives no target weights, position sizes or advice.
 - It has no track record yet: the first issue was 2026-10-26.
 - It never asks the seller for a key. The optional wallet key stays in your environment, signs on your machine and is
-  never sent anywhere. The client pays only the offer it has checked (see Payment safety), at most 0.10 USDC per
+  never sent anywhere. The client pays only the offer it has checked (see Payment safety), at most 0.05 USDC per
   payment and 3 payments per session by default.
 - It does not rewrite issues. A correction is a new dated record.
 
@@ -95,7 +95,7 @@ Use a dedicated wallet that holds only what you are willing to spend.
 | `get_deviations` | dated bugs, outages and other deviations | free |
 | `get_disclosures` | the publisher's positions and conflicts | free |
 | `get_payment_offer` | the live x402 offer, without paying | free |
-| `get_latest_issue` | today's issue, the receipt, the settlement transaction and the hash check | 0.10 USDC |
+| `get_latest_issue` | today's issue, the receipt, the settlement transaction and the hash check | 0.05 USDC |
 
 ## Payment safety
 
@@ -105,11 +105,11 @@ Use a dedicated wallet that holds only what you are willing to spend.
   - scheme `exact`;
   - network Base mainnet (`eip155:8453`);
   - asset USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`;
-  - amount `100000` (0.10 USDC);
+  - amount `50000` (0.05 USDC);
   - for `https://signals.agenttrustapi.com/v1/feed/latest`;
   - payable to the published merchant `0x8b0ad0CE12Ac86822c4d5dE442F5e445d14F9183` (override with
     `SIGNAL_FEED_EXPECTED_PAY_TO`).
-- **The x402 client's spend controls** are capped at 0.10 USDC per payment.
+- **The x402 client's spend controls** are capped at 0.05 USDC per payment.
 - **After paying**, the receipt hash, the recomputed hash and the hash in the public ledger must all match.
 - **Session budget:** at most `SIGNAL_FEED_MAX_PAID_CALLS` payments per server process (default 3). Each payment
   is counted before it is attempted. A payment refused by the preflight below is not counted.
@@ -128,7 +128,7 @@ Use a dedicated wallet that holds only what you are willing to spend.
 ### Suggested spend policy for any agent buying this feed
 
 - Pay only `https://signals.agenttrustapi.com/v1/feed/latest`, only to the published merchant, only USDC on Base.
-- At most 0.10 USDC per issue and 0.20 USDC per day. One new issue a day is enough, and the date is in the offer.
+- At most 0.05 USDC per issue and 0.10 USDC per day. One new issue a day is enough, and the date is in the offer.
 - Never retry a failed payment blindly. Stop on a non-200 answer or on a duplicate charge, and ask for a refund
   under the published policy.
 

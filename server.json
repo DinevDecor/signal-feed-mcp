@@ -8,13 +8,13 @@
     "source": "github"
   },
   "websiteUrl": "https://signals.agenttrustapi.com",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "signal-feed-mcp",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -29,7 +29,7 @@
         },
         {
           "name": "SIGNAL_FEED_MAX_PAID_CALLS",
-          "description": "Maximum paid calls per server run (0.10 USDC each).",
+          "description": "Maximum paid calls per server run (0.05 USDC each).",
           "isRequired": false,
           "isSecret": false,
           "format": "string",

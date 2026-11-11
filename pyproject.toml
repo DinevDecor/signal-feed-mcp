@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
-authors = [{ name = "Agrobroker LTD", email = "hello@agenttrustapi.com" }]
+authors = [{ name = "Signal Feed", email = "hello@agenttrustapi.com" }]
 keywords = ["mcp", "x402", "market-regime", "trading-agent", "base", "usdc"]
 classifiers = [
     "Programming Language :: Python :: 3",
